@@ -36,6 +36,12 @@ function SmartThingsAccessory(platform, device) {
     var id = uuid.generate(idKey);
 
     Accessory.call(this, this.name, id);
+
+    this.getService(Service.AccessoryInformation)
+        .setCharacteristic(Characteristic.Manufacturer, device.manufacturerName)
+        .setCharacteristic(Characteristic.Model, device.modelName)
+        .setCharacteristic(Characteristic.SerialNumber, device.basename);
+
     var that = this;
 
     //Get the Capabilities List
