@@ -1,6 +1,6 @@
 var inherits = require('util').inherits;
 
-var Accessory, Service, Characteristic, uuid, EnergyCharacteristics;
+var Accessory, Service, Characteristic, uuid, EnergyCharacteristics, ColorCharacteristics;
 
 /*
  *   SmartThings Accessory
@@ -11,7 +11,8 @@ module.exports = function(oAccessory, oService, oCharacteristic, ouuid) {
         Accessory = oAccessory;
         Service = oService;
         Characteristic = oCharacteristic;
-        EnergyCharacteristics = require('../lib/customCharacteristics').EnergyCharacteristics(Characteristic)
+        EnergyCharacteristics = require('../lib/customCharacteristics').EnergyCharacteristics(Characteristic);
+        ColorCharacteristics = require('../lib/customCharacteristics').ColorCharacteristics(Characteristic);
 
         uuid = ouuid;
 
@@ -200,7 +201,7 @@ function SmartThingsAccessory(platform, device) {
         
     }
     if (device.capabilities["Switch"] !== undefined) {
-        if (device.capabilities["Color Control"] !== undefined || device.capabilities["Switch Level"] !== undefined) {
+        if (device.capabilities["Color Control"] !== undefined || device.capabilities["Color Temperature"] !== undefined || device.capabilities["Switch Level"] !== undefined) {
             thisService = this.getaddService(Service.Lightbulb);
             this.deviceGroup = "lights";
         } else {           
@@ -209,26 +210,32 @@ function SmartThingsAccessory(platform, device) {
         }
 
         if (device.capabilities["Color Control"] !== undefined) {
-            thisCharacteristic = thisService.getCharacteristic(Characteristic.Hue)
+            thisCharacteristic = thisService.getCharacteristic(Characteristic.Hue);
             thisCharacteristic.on('get', function(callback) { callback(null, Math.round(that.device.attributes.hue*3.6)); });
             thisCharacteristic.on('set', function(value, callback) { that.platform.api.runCommand(callback, that.deviceid, "setHue", { value1: Math.round(value/3.6) }); });
             that.platform.addAttributeUsage("hue", this.deviceid, thisCharacteristic);
 
-            thisCharacteristic = thisService.getCharacteristic(Characteristic.Saturation)
+            thisCharacteristic = thisService.getCharacteristic(Characteristic.Saturation);
             thisCharacteristic.on('get', function(callback) { callback(null, parseInt(that.device.attributes.saturation)); });
             thisCharacteristic.on('set', function(value, callback) { that.platform.api.runCommand(callback, that.deviceid, "setSaturation", { value1: value }); });
             that.platform.addAttributeUsage("saturation", this.deviceid, thisCharacteristic);
         }
 
-        if (device.capabilities["Switch Level"] !== undefined) {
+        if (device.capabilities["Color Temperature"] !== undefined) {
+            thisCharacteristic = thisService.getCharacteristic(Characteristic.ColorTemperature);
+            thisCharacteristic.on('get', function(callback) { callback(null, Math.round(1/(that.device.attributes.colorTemperature/1000000))); });
+            thisCharacteristic.on('set', function(value, callback) { that.platform.api.runCommand(callback, that.deviceid, "setColorTemperature", { value1: Math.round(1000000/value) }); });
+            that.platform.addAttributeUsage("colorTemperature", this.deviceid, thisCharacteristic);
+        }
 
-            thisCharacteristic = thisService.getCharacteristic(Characteristic.Brightness)
+        if (device.capabilities["Switch Level"] !== undefined) {
+            thisCharacteristic = thisService.getCharacteristic(Characteristic.Brightness);
             thisCharacteristic.on('get', function(callback) { callback(null, parseInt(that.device.attributes.level)); });
             thisCharacteristic.on('set', function(value, callback) { that.platform.api.runCommand(callback, that.deviceid, "setLevel", { value1: value }); });
             that.platform.addAttributeUsage("level", this.deviceid, thisCharacteristic);
         } 
 
-        thisCharacteristic = thisService.getCharacteristic(Characteristic.On)
+        thisCharacteristic = thisService.getCharacteristic(Characteristic.On);
         thisCharacteristic.on('get', function(callback) { callback(null, that.device.attributes.switch == "on"); })
         thisCharacteristic.on('set', function(value, callback) {
                 if (value)
